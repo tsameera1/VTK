@@ -1,3 +1,4 @@
+
 /*=========================================================================
 
   Program:   Visualization Toolkit
@@ -25,6 +26,8 @@
 #include "vtkStdString.h"
 #include "vtksys/ios/sstream"
 #include "vtkObjectFactory.h"
+
+#include "vtkAxisExtended.h"
 
 #include <algorithm>
 #include <limits>
@@ -370,7 +373,7 @@ bool vtkAxis::Paint(vtkContext2D *painter)
 
 //-----------------------------------------------------------------------------
 void vtkAxis::SetMinimum(double minimum)
-{
+{ 
   minimum = std::max(minimum, this->MinimumLimit);
   if (this->Minimum == minimum)
     {
@@ -475,7 +478,7 @@ void vtkAxis::SetNotation(int notation)
 void vtkAxis::AutoScale()
 {
   // Calculate the min and max, set the number of ticks and the tick spacing
-  this->TickInterval = this->CalculateNiceMinMax(this->Minimum, this->Maximum);
+  //this->TickInterval = this->CalculateNiceMinMax(this->Minimum, this->Maximum); // Tharindu - This method is called for log scales in GenerateTickLabels(,)
   this->UsingNiceMinMax = true;
   this->GenerateTickLabels(this->Minimum, this->Maximum);
 }
@@ -489,7 +492,8 @@ void vtkAxis::RecalculateTickSpacing()
     {
     double min = this->Minimum;
     double max = this->Maximum;
-    this->TickInterval = this->CalculateNiceMinMax(min, max);
+   // this->TickInterval = this->CalculateNiceMinMax(min, max);  // Tharindu shifted to log scales only, in GenerateTickLabels(,)
+
     if (this->UsingNiceMinMax)
       {
       this->GenerateTickLabels(this->Minimum, this->Maximum);
@@ -666,7 +670,8 @@ vtkRectf vtkAxis::GetBoundingRect(vtkContext2D* painter)
 void vtkAxis::GenerateTickLabels(double min, double max)
 {
   // Now calculate the tick labels, and positions within the axis range
-  this->TickPositions->SetNumberOfTuples(0);
+   
+    this->TickPositions->SetNumberOfTuples(0);
   this->TickLabels->SetNumberOfTuples(0);
 
   // We generate a logarithmic scale when logarithmic axis is activated and the
@@ -675,6 +680,10 @@ void vtkAxis::GenerateTickLabels(double min, double max)
     {
     // We calculate the first tick mark for lowest order of magnitude.
     // and the last for the highest order of magnitude.
+        
+    
+    this->TickInterval = this->CalculateNiceMinMax(min, max);  // Added by Tharindu to only log scales
+
     bool niceTickMark = false;
     int minOrder = 0;
     int maxOrder = 0;
@@ -717,6 +726,26 @@ void vtkAxis::GenerateTickLabels(double min, double max)
   else
     {
     // Now calculate the tick labels, and positions within the axis range
+
+    //*************************************************Tharindu*************
+        //This gets the tick interval and max, min of labeling from the Extended algorithm 
+
+    vtkAxisExtended* tickPosition = vtkAxisExtended::New();
+    double* values = tickPosition->GenerateExtendedTickLabels(min, max, 4); // Value 4 is hard coded for the user desired tick spacing
+    min = values[0];
+    max = values[1];
+    this->TickInterval = values[2];
+
+    if(min < this->Minimum)
+        this->Minimum - min;
+    
+    if(max > this->Maximum)
+        this->Maximum = max;
+    
+
+
+    //***************************************Tharindu****************************
+
     double mult = max > min ? 1.0 : -1.0;
     double range = 0.0;
     int n = 0;
