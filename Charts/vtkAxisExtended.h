@@ -1,10 +1,9 @@
-
-
 #ifndef __vtkAxisExtended_h
 #define __vtkAxisExtended_h
 #endif
 
 #include "vtkObject.h"
+#include "vtkVector.h"
 //
 #ifndef DBL_EPSILON
 #  define VTK_DBL_EPSILON    2.2204460492503131e-16
@@ -13,9 +12,10 @@
 #endif  // DBL_EPSILON
 
 
+
 class VTK_CHARTS_EXPORT vtkAxisExtended : public vtkObject
 { 
-public:
+  public:
     static vtkAxisExtended *New();
 
     // This method return a value to make step sizes corresponding to low q and j values more preferable
@@ -40,16 +40,16 @@ public:
     // The method return the minimum tick position, maximum tick postion and the tick spacing
     static double* GenerateExtendedTickLabels(double dmin, double dmax, double m);
 
-    //static double Test();
+  
 
-    
-protected:
-  vtkAxisExtended() {};
-  ~vtkAxisExtended() {};
 
- 
-private:
-  vtkAxisExtended(const vtkAxisExtended&);  // Not implemented.
-  void operator=(const vtkAxisExtended&);  // Not implemented.
+  protected:
+    vtkAxisExtended() {};
+    ~vtkAxisExtended() {};
+
+
+  private:
+    vtkAxisExtended(const vtkAxisExtended&);  // Not implemented.
+    void operator=(const vtkAxisExtended&);  // Not implemented.
 
 };

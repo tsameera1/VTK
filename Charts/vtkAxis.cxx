@@ -730,14 +730,14 @@ void vtkAxis::GenerateTickLabels(double min, double max)
     //*************************************************Tharindu*************
         //This gets the tick interval and max, min of labeling from the Extended algorithm 
 
-    vtkAxisExtended* tickPosition = vtkAxisExtended::New();
-    double* values = tickPosition->GenerateExtendedTickLabels(min, max, 4); // Value 4 is hard coded for the user desired tick spacing
+    vtkAxisExtended* tickPositionExtended = vtkAxisExtended::New();
+    double* values = tickPositionExtended->GenerateExtendedTickLabels(min, max, 4); // Value 4 is hard coded for the user desired tick spacing
     min = values[0];
     max = values[1];
     this->TickInterval = values[2];
 
     if(min < this->Minimum)
-        this->Minimum - min;
+        this->Minimum = min;
     
     if(max > this->Maximum)
         this->Maximum = max;
