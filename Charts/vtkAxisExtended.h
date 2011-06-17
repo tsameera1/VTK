@@ -36,9 +36,38 @@ class VTK_CHARTS_EXPORT vtkAxisExtended : public vtkObject
     // Derives the maximum values for density given k (number of ticks) and m (user given)
     static double DensityMax(int k, double m);
 
+    // This method implements an exhaustive search for the legibilty parametes
+    double Legibility(double lmin, double lmax, double lstep, double scaling);
+
+    // This methods return the legibility score of differnt formats
+    static double FormatLegibilityScore(double n, int format);
+
+    //This method returns the string length of differnt format notations.
+    static int FormatStringLength(int format, double n, int precision);
+
     // This method implements the algorithm given in the paper
     // The method return the minimum tick position, maximum tick postion and the tick spacing
-    static double* GenerateExtendedTickLabels(double dmin, double dmax, double m);
+    double* GenerateExtendedTickLabels(double dmin, double dmax, double m, double scaling);
+
+    // Set/Get methods for variables
+
+    virtual void SetFontSize(int fontSize);
+
+    virtual void SetMinFontSize(int minFontSize);
+
+    virtual void SetPrecision(int precision);
+
+    virtual void SetFormat(int format);
+
+    virtual void SetOrientation(int orientation);
+    
+    virtual int GetFontSize();
+
+    virtual int GetLabelFormat();
+
+    virtual int GetOrientation();
+
+    virtual bool GetLabelLegibilityChanged();
 
   
 
@@ -47,6 +76,12 @@ class VTK_CHARTS_EXPORT vtkAxisExtended : public vtkObject
     vtkAxisExtended() {};
     ~vtkAxisExtended() {};
 
+    int Orientation;
+    int FontSize;
+    int MinFontSize;
+    double Precision;
+    int LabelFormat;
+    bool LabelLegibilityChanged;
 
   private:
     vtkAxisExtended(const vtkAxisExtended&);  // Not implemented.

@@ -16,7 +16,6 @@ SET(Kit_SRCS
   vtkAbstractContextBufferId.cxx
   vtkAbstractContextItem.cxx
   vtkAxis.cxx
-  vtkAxisExtended.h
   vtkAxisExtended.cxx
   vtkBlockItem.cxx
   vtkBrush.cxx

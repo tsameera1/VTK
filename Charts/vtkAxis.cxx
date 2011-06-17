@@ -730,18 +730,54 @@ void vtkAxis::GenerateTickLabels(double min, double max)
     //*************************************************Tharindu*************
         //This gets the tick interval and max, min of labeling from the Extended algorithm 
 
+    double scaling = 0.0;
+  
+    if (this->Point1[0] == this->Point2[0]) // x1 == x2, therefore vertical
+      {
+      scaling = (this->Point2[1] - this->Point1[1]) /
+                (this->Maximum - this->Minimum);
+   
+      }
+    else
+      {
+      scaling = (this->Point2[0] - this->Point1[0]) /
+                (this->Maximum - this->Minimum);
+    
+      }
+
+    int fontSize = 	this->LabelProperties->GetFontSize();
+    int minFontSize =  this->LabelProperties->GetFontSizeMinValue();
     vtkAxisExtended* tickPositionExtended = vtkAxisExtended::New();
-    double* values = tickPositionExtended->GenerateExtendedTickLabels(min, max, 4); // Value 4 is hard coded for the user desired tick spacing
+
+    // The following parameters are required for the legibility part in the optimization
+    tickPositionExtended->SetFontSize(fontSize);
+    tickPositionExtended->SetMinFontSize(minFontSize);
+    tickPositionExtended->SetPrecision(this->Precision);
+
+    double* values = tickPositionExtended->GenerateExtendedTickLabels(min, max, 4, scaling); // Value 4 is hard coded for the user desired tick spacing
     min = values[0];
     max = values[1];
     this->TickInterval = values[2];
 
     if(min < this->Minimum)
-        this->Minimum = min;
+      {
+      this->Minimum = min;
+      }
     
     if(max > this->Maximum)
-        this->Maximum = max;
+      {
+      this->Maximum = max;
+      }
     
+    if(tickPositionExtended->GetLabelLegibilityChanged()) // Change label text properties only if the Legibility method is executed
+      {
+        this->Notation = tickPositionExtended->GetLabelFormat();
+        this->LabelProperties->SetFontSize(tickPositionExtended->GetFontSize());
+        if(tickPositionExtended->GetOrientation() == 1)
+          {
+          this->LabelProperties->SetOrientation(1.57);  // Set this to pi/2 to make the labels vertical
+          }
+      }
 
 
     //***************************************Tharindu****************************
@@ -779,25 +815,27 @@ void vtkAxis::GenerateTickLabels(double min, double max)
         value = pow(double(10.0), double(value));
         }
       // Now create a label for the tick position
-      vtksys_ios::ostringstream ostr;
-      ostr.imbue(vtkstd::locale::classic());
-      if (this->Notation > 0)
-        {
-        ostr.precision(this->Precision);
-        }
-      if (this->Notation == 1)
-        {
-        // Scientific notation
-        ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
-        }
-      else if (this->Notation == 2)
-        {
-        ostr.setf(ios::fixed, ios::floatfield);
-        }
-      ostr << value;
+      GenerateLabelFormat(this->Notation,value);
+      //vtksys_ios::ostringstream ostr;
+      //ostr.imbue(vtkstd::locale::classic());
+      //if (this->Notation > 0)
+      //  {
+      //  ostr.precision(this->Precision);
+      //  }
+      //if (this->Notation == 1)
+      //  {
+      //  // Scientific notation
+      //  ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
+      //  }
+      //else if (this->Notation == 2)
+      //  {
+      //  ostr.setf(ios::fixed, ios::floatfield);
+      //  }
+      //ostr << value;
 
-      this->TickLabels->InsertNextValue(ostr.str());
+      //this->TickLabels->InsertNextValue(ostr.str());
       }
+      
     }
   this->TickMarksDirty = false;
 }
@@ -833,6 +871,66 @@ void vtkAxis::GenerateTickLabels()
 
     this->TickLabels->InsertNextValue(ostr.str());
     }
+}
+
+//-------------------------------------------------------------------
+// This methods generates tick labels for 8 different format notations
+//   1 - Decimal e.g. 5000
+//   2 - Factored Decimals e.g. 5 (thousands)
+//   3 - K e.g. 5K
+//   4 - Factored K e.g. 5(K)
+//   5 - M e.g. 5M
+//   6 - Factored M e.g. 5(M)
+//   7 - Scientific 5 * 10^6
+//   8 - Factored Scientific 5 (10^6)
+
+void vtkAxis::GenerateLabelFormat(int notation, double n)
+{
+  vtksys_ios::ostringstream ostr;
+  ostr.imbue(vtkstd::locale::classic());
+      
+  ostr.precision(this->Precision);
+  ostr.setf(ios::fixed, ios::floatfield);
+  
+        
+  switch(notation)
+  {
+    case 1:
+      ostr << n;
+      this->TickLabels->InsertNextValue(ostr.str());
+      break;
+    case 2:
+      ostr << n/1000.0;
+      this->TickLabels->InsertNextValue(ostr.str());  // Three 0's get reduced
+      break;
+    case 3:
+      ostr << n/1000.0 << "K";
+      this->TickLabels->InsertNextValue(ostr.str()); // minus three zeros + K
+      break;
+    case 4:
+      ostr << n/1000.0 ;
+      this->TickLabels->InsertNextValue(ostr.str());// minus three zeros
+      break;
+    case 5:
+      ostr << n/1000000.0 << "M";
+      this->TickLabels->InsertNextValue(ostr.str()); // minus six zeros 
+      break;
+    case 6:
+      ostr << n/1000000.0;
+      this->TickLabels->InsertNextValue(ostr.str()); // minus six zeros + M
+      break;
+    case 7:
+      ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
+      ostr << n/1000.0 ;
+      this->TickLabels->InsertNextValue(ostr.str());
+      break;
+    case 8:
+      ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
+      ostr << n/1000.0 ;
+      this->TickLabels->InsertNextValue(ostr.str());
+      break;
+  }      
+
 }
 
 //-----------------------------------------------------------------------------
@@ -1081,6 +1179,7 @@ void vtkAxis::GenerateLogScaleTickMarks(int order,
       {
       // Scientific notation
       ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
+      
       }
     else if (this->Notation == 2)
       {

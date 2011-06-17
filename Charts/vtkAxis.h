@@ -48,6 +48,7 @@ public:
     LEFT = 0,
     BOTTOM,
     RIGHT,
+
     TOP,
     PARALLEL
   };
@@ -256,6 +257,8 @@ protected:
   // Description:
   // Generate tick labels from the supplied double array of tick positions.
   void GenerateTickLabels();
+
+  void GenerateLabelFormat(int notation, double n);
 
   // Description:
   // Calculate the next "nicest" numbers above and below the current minimum.
