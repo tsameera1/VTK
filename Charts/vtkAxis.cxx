@@ -771,12 +771,12 @@ void vtkAxis::GenerateTickLabels(double min, double max)
     
     if(tickPositionExtended->GetLabelLegibilityChanged()) // Change label text properties only if the Legibility method is executed
       {
-        this->Notation = tickPositionExtended->GetLabelFormat();
-        this->LabelProperties->SetFontSize(tickPositionExtended->GetFontSize());
-        if(tickPositionExtended->GetOrientation() == 1)
-          {
-          this->LabelProperties->SetOrientation(1.57);  // Set this to pi/2 to make the labels vertical
-          }
+        //this->Notation = tickPositionExtended->GetLabelFormat();
+        //this->LabelProperties->SetFontSize(tickPositionExtended->GetFontSize());
+        //if(tickPositionExtended->GetOrientation() == 1)
+        //  {
+        //  this->LabelProperties->SetOrientation(1.57);  // Set this to pi/2 to make the labels vertical
+        //  }
       }
 
 
@@ -815,25 +815,25 @@ void vtkAxis::GenerateTickLabels(double min, double max)
         value = pow(double(10.0), double(value));
         }
       // Now create a label for the tick position
-      GenerateLabelFormat(this->Notation,value);
-      //vtksys_ios::ostringstream ostr;
-      //ostr.imbue(vtkstd::locale::classic());
-      //if (this->Notation > 0)
-      //  {
-      //  ostr.precision(this->Precision);
-      //  }
-      //if (this->Notation == 1)
-      //  {
-      //  // Scientific notation
-      //  ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
-      //  }
-      //else if (this->Notation == 2)
-      //  {
-      //  ostr.setf(ios::fixed, ios::floatfield);
-      //  }
-      //ostr << value;
+     // GenerateLabelFormat(this->Notation,value);
+      vtksys_ios::ostringstream ostr;
+      ostr.imbue(vtkstd::locale::classic());
+      if (this->Notation > 0)
+        {
+        ostr.precision(this->Precision);
+        }
+      if (this->Notation == 1)
+        {
+        // Scientific notation
+        ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
+        }
+      else if (this->Notation == 2)
+        {
+        ostr.setf(ios::fixed, ios::floatfield);
+        }
+      ostr << value;
 
-      //this->TickLabels->InsertNextValue(ostr.str());
+      this->TickLabels->InsertNextValue(ostr.str());
       }
       
     }

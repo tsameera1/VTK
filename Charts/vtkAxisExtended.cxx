@@ -168,6 +168,9 @@ double vtkAxisExtended::FormatLegibilityScore(double n, int format)
     case 8:
       return 0.3;
       break;
+    default:
+      return 0.0;
+      break;
   }
 }
 
@@ -182,7 +185,7 @@ int vtkAxisExtended::FormatStringLength(int format, double n, int precision)
    ostr.setf(ios::fixed, ios::floatfield);
    ostr << n;
 
-   int numSize = ostr.str().length()-1;  // Gets the length of the string with the current format without the end character
+   int numSize = (int) ostr.str().length()-1;  // Gets the length of the string with the current format without the end character
         
 
   switch(format)
@@ -208,14 +211,17 @@ int vtkAxisExtended::FormatStringLength(int format, double n, int precision)
     case 7:
       ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
       ostr<<n;
-      numSize = ostr.str().length();
+      numSize = (int) ostr.str().length();
       return numSize;
       break;
     case 8:
       ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
       ostr<<n;
-      numSize = ostr.str().length();
+      numSize = (int) ostr.str().length();
       return numSize-3;
+      break;
+    default:
+      return 0;
       break;
   }
 
@@ -322,6 +328,7 @@ double vtkAxisExtended::Legibility(double lmin, double lmax, double lstep, doubl
   this->FontSize = bestFontSize;
   this->Orientation = bestOrientation;
   this->LabelFormat = bestFormat;
+  delete [] tickPositions;
   return bestLegScore;
 
 }
@@ -356,7 +363,7 @@ double* vtkAxisExtended::GenerateExtendedTickLabels(double dmin, double dmax, do
   double bestScore = -2;
   double bestLmin(0),bestLmax(0), bestLstep(0);
 
-  const int INF = 1000; //INT_MAX;  Again 1000 is hard coded
+  const int INF = 100; //INT_MAX;  Again 1000 is hard coded
 
   int j =1;
   while(j < INF)
