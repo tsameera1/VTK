@@ -109,7 +109,7 @@ double vtkAxisExtended::FormatLegibilityScore(double n, int format)
 {
   switch(format)
   {
-    case 1:
+    case 2:
       if( abs(n)>0.0001 &&  abs(n) < 1000000)
         {
         return 1.0;
@@ -119,7 +119,7 @@ double vtkAxisExtended::FormatLegibilityScore(double n, int format)
         return 0.0;
         }
       break;
-    case 2:
+    case 7:
       return 0.5;
       break; 
     case 3:
@@ -162,7 +162,7 @@ double vtkAxisExtended::FormatLegibilityScore(double n, int format)
         return 0.0;
         }
       break;
-    case 7:
+    case 1:
       return 0.25;
       break;
     case 8:
@@ -183,32 +183,44 @@ int vtkAxisExtended::FormatStringLength(int format, double n, int precision)
       
    ostr.precision(precision);
    ostr.setf(ios::fixed, ios::floatfield);
-   ostr << n;
-
-   int numSize = (int) ostr.str().length()-1;  // Gets the length of the string with the current format without the end character
+  
+   int numSize(0);
+  
         
 
   switch(format)
   {
-    case 1:
+    case 2:
+      ostr << n;
+      numSize = (int) ostr.str().length()-1;  // Gets the length of the string with the current format without the end character
       return numSize;
       break;
-    case 2:
-      return numSize-3;  // Three 0's get reduced
+    case 7:
+      ostr << n/1000;
+      numSize = (int) ostr.str().length()-1;
+      return numSize;  // Three 0's get reduced
       break;
     case 3:
-      return numSize-2; // minus three zeros + K
+      ostr << n/1000;
+      numSize = (int) ostr.str().length()-1;
+      return numSize+1; // minus three zeros + K
       break;
     case 4:
-      return numSize-3; // minus three zeros
+      ostr << n/1000;
+      numSize = (int) ostr.str().length()-1;
+      return numSize; // minus three zeros
       break;
     case 5:
-      return numSize-5; // minus six zeros 
+      ostr << n/1000000;
+      numSize = (int) ostr.str().length()-1;
+      return numSize; // minus six zeros 
       break;
     case 6:
-      return numSize-6; // minus six zeros + M
+      ostr << n/1000000;
+      numSize = (int) ostr.str().length()-1;
+      return numSize+1; // minus six zeros + M
       break;
-    case 7:
+    case 1:
       ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
       ostr<<n;
       numSize = (int) ostr.str().length();
@@ -216,9 +228,9 @@ int vtkAxisExtended::FormatStringLength(int format, double n, int precision)
       break;
     case 8:
       ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
-      ostr<<n;
+      ostr<<n/1000;
       numSize = (int) ostr.str().length();
-      return numSize-3;
+      return numSize;
       break;
     default:
       return 0;
@@ -229,7 +241,7 @@ int vtkAxisExtended::FormatStringLength(int format, double n, int precision)
 
 
 // This methods determinies the optimum notation, font size and orientation of labels from an exhaustive search
-double vtkAxisExtended::Legibility(double lmin, double lmax, double lstep, double scaling)
+double* vtkAxisExtended::Legibility(double lmin, double lmax, double lstep, double scaling)
 {
   int numTicks = floor((lmax-lmin)/lstep);
   double* tickPositions = new double[numTicks];
@@ -271,9 +283,10 @@ double vtkAxisExtended::Legibility(double lmin, double lmax, double lstep, doubl
     formatLegSum = 0.9 * formatLegSum + 0.1 * v; 
     
     double fontLegSum = 0.0;
+
     int desiredFontSize = 12;   /// Desired font size is set to 12
     
-    for (int iFont = this->FontSize; iFont >= this->MinFontSize ; iFont--)
+    for (int iFont = 12; iFont >= this->MinFontSize ; iFont--)
       {
       if(iFont == desiredFontSize)
         {
@@ -294,22 +307,26 @@ double vtkAxisExtended::Legibility(double lmin, double lmax, double lstep, doubl
 
         // Here the gap between two consecutive labels is calculated as:
         // 2*Actual distance (in pixels) among two ticks - string lengths of the two largest labels
-        double tickDistance = lstep * scaling;
-        double fontExtent = (FormatStringLength(iFormat,tickPositions[numTicks-1],this->Precision) + FormatStringLength(iFormat,tickPositions[numTicks-2],this->Precision))*this->FontSize;
-        double labelingGap= 2*(tickDistance) - fontExtent;
-        double overlapLegSum = 0.0;
+       
+        double overlapLegSum = 1.0;
 
-        if(labelingGap > 3*this->FontSize)
+        if(numTicks>1)
           {
-          overlapLegSum = 1.0;
-          }
-        else if(labelingGap < 3*this->FontSize && labelingGap > 0)
-          {
-          overlapLegSum = 2 - 2* fontExtent / tickDistance ;
-          }
-        else 
-          {
-          overlapLegSum = -100;
+          double tickDistance = lstep * scaling;
+          double fontExtent = (FormatStringLength(iFormat,tickPositions[numTicks-1],this->Precision) + FormatStringLength(iFormat,tickPositions[numTicks-2],this->Precision))*iFont;
+          double labelingGap= 2*(tickDistance) - fontExtent;
+          if(labelingGap > 3*iFont)
+            {
+            overlapLegSum = 1.0;
+            }
+          else if(labelingGap < 3*iFont && labelingGap > 0)
+            {
+            overlapLegSum = 2 - 2* fontExtent / tickDistance ;
+            }
+          else 
+            {
+            overlapLegSum = -100;
+            }
           }
 
         double legScore = (formatLegSum + fontLegSum + orientLegSum + overlapLegSum)/4;
@@ -319,17 +336,17 @@ double vtkAxisExtended::Legibility(double lmin, double lmax, double lstep, doubl
           bestFormat = iFormat;
           bestOrientation = iOrientation;
           bestFontSize = iFont;
+          bestLegScore = legScore;
           }
         }
       }
 
       
   }
-  this->FontSize = bestFontSize;
-  this->Orientation = bestOrientation;
-  this->LabelFormat = bestFormat;
+
+  double LegParameters[4] = {bestLegScore, bestFormat,bestFontSize, bestOrientation};
   delete [] tickPositions;
-  return bestLegScore;
+  return LegParameters;
 
 }
 
@@ -421,9 +438,9 @@ double* vtkAxisExtended::GenerateExtendedTickLabels(double dmin, double dmax, do
             if(score < bestScore)
                continue;
 
-            double l = Legibility(lmin,lmax,lstep,scaling);  
+            double* l = Legibility(lmin,lmax,lstep,scaling);  
 
-            score = w[0]*s + w[1]*c + w[2]*g + w[3]*l;
+            score = w[0]*s + w[1]*c + w[2]*g + w[3]*l[0];
 
             
             if(score > bestScore)
@@ -432,6 +449,9 @@ double* vtkAxisExtended::GenerateExtendedTickLabels(double dmin, double dmax, do
               bestLmin = lmin;
               bestLmax = lmax;
               bestLstep = lstep;
+              this->LabelFormat = l[1]; // label format
+              this->FontSize = l[2]; // label font size
+              this->Orientation = l[3]; // label orientation            
               }
             }
           z++;

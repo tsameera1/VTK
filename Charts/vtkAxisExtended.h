@@ -37,7 +37,7 @@ class VTK_CHARTS_EXPORT vtkAxisExtended : public vtkObject
     static double DensityMax(int k, double m);
 
     // This method implements an exhaustive search for the legibilty parametes
-    double Legibility(double lmin, double lmax, double lstep, double scaling);
+    double* Legibility(double lmin, double lmax, double lstep, double scaling);
 
     // This methods return the legibility score of differnt formats
     static double FormatLegibilityScore(double n, int format);
