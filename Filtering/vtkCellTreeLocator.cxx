@@ -15,6 +15,7 @@
 #include <algorithm>
 #include "vtkObjectFactory.h"
 #include "vtkGenericCell.h"
+#include "vtkIdListCollection.h"
 #include "vtkSmartPointer.h"
 
 vtkStandardNewMacro(vtkCellTreeLocator);
@@ -584,9 +585,41 @@ vtkCellTreeLocator::~vtkCellTreeLocator()
   Free();
 }
 
+//---------------------------------------------------------------------------
+void vtkCellTreeLocator::BuildLocatorIfNeeded()
+{
+  if (this->LazyEvaluation)
+    {
+    if (!this->Tree || (this->Tree && (this->MTime>this->BuildTime)))
+      {
+      this->Modified();
+      vtkDebugMacro(<< "Forcing BuildLocator");
+      this->ForceBuildLocator();
+      }
+    }
+}
+//---------------------------------------------------------------------------
+void vtkCellTreeLocator::ForceBuildLocator()
+{
+  //
+  // don't rebuild if build time is newer than modified and dataset modified time
+  if ( (this->Tree) &&
+       (this->BuildTime>this->MTime) &&
+       (this->BuildTime>DataSet->GetMTime()))
+    {
+    return;
+    }
+  // don't rebuild if UseExistingSearchStructure is ON and a tree structure already exists
+  if ( (this->Tree) && this->UseExistingSearchStructure)
+    {
+    this->BuildTime.Modified();
+    vtkDebugMacro(<< "BuildLocator exited - UseExistingSearchStructure");
+    return;
+    }
+  this->BuildLocatorInternal();
+}
 
-
-void vtkCellTreeLocator::Build()
+void vtkCellTreeLocator::BuildLocatorInternal()
 {
   Free();
 
@@ -609,7 +642,11 @@ void vtkCellTreeLocator::Build()
 
 void vtkCellTreeLocator::BuildLocator()
 {
-  Build();
+  if (this->LazyEvaluation)
+    {
+    return;
+    }
+  this->ForceBuildLocator();
 }
 
 // ---------------------------------------------------------------------------
@@ -701,9 +738,9 @@ int vtkCellTreeLocator::IntersectWithLine(double p1[3], double p2[3], double tol
   double *boundsPtr;
   double cellBounds[6]; 
   
-  //
- // this->BuildLocator();
-  //
+  
+  this->BuildLocatorIfNeeded();
+  
   // Does ray pass through root BBox
   tmin = 0; tmax = 1;
   
@@ -728,21 +765,7 @@ int vtkCellTreeLocator::IntersectWithLine(double p1[3], double p2[3], double tol
     default:    _getMinDist = _getMinDistNEG_Z; break;
     }
 
-  //
-  // we will sort intersections by t, so keep track using these lists
-  //
-  std::vector<Intersection> t_list;
-  vtkSmartPointer<vtkPoints> tempPoints;
-  vtkSmartPointer<vtkIdList>    tempIds;
- /* if (points)
-    {
-    tempPoints = vtkSmartPointer<vtkPoints>::New();
-    }*/
-  if (cellIds)
-    {
-    tempIds = vtkSmartPointer<vtkIdList>::New();
-    }
-  int icount = 0;
+
   //
   // OK, lets walk the tree and find intersections
   //
@@ -826,20 +849,17 @@ int vtkCellTreeLocator::IntersectWithLine(double p1[3], double p2[3], double tol
         {
         if (this->IntersectCellInternal(cell_ID, p1, p2, tol, t_hit, ipt, pcoords, subId))
           {
-          /*if (points)
+          if (t_hit<closest_intersection)
             {
-            tempPoints->InsertNextPoint(ipt);
-            }*/
-          if (cellIds)
-            {
-            tempIds->InsertNextId(cell_ID);
+            HIT = true;
+            closest_intersection = t_hit;
+            cellIds = cell_ID;
+            x[0] = ipt[0];
+            x[1] = ipt[1];
+            x[2] = ipt[2];
             }
-          t_list.push_back(Intersection(t_hit, icount++));
-          HIT = true;
-          if(HIT)
-          {
-          return 1;
-          }
+     
+     
           }
         }
       }
@@ -847,28 +867,7 @@ int vtkCellTreeLocator::IntersectWithLine(double p1[3], double p2[3], double tol
     }
   if (HIT)
     {
-  //  std::sort(t_list.begin(), t_list.end(), Isort());
-    int N = static_cast<int>(t_list.size());
-    /*if (points)
-      {
-      points->SetNumberOfPoints(N);
-      }*/
-   /* if (cellIds)
-      {
-      cellIds->SetNumberOfIds(N);
-      }*/
-    //for (int n=0; n<N; n++)
-    //  {
-    //  Intersection &i = t_list[n];
-    //  /*if (points)
-    //    {
-    //    points->SetPoint(n, tempPoints->GetPoint(i.second));
-    //    }*/
-    //  if (cellIds)
-    //    {
-    //    cellIds->SetId(n, tempIds->GetId(i.second));
-    //    }
-    //  }
+    t = closest_intersection;
     }
   //
   return HIT;
@@ -1222,13 +1221,13 @@ void vtkCellTreeLocator::Classify(const double origin[3],
     Near = &this->Tree->Nodes.at(Parent->GetLeftChildIndex()+1);
     rDist = (tDivDirection) ? tOriginToDivPlane / tDivDirection : VTK_LARGE_FLOAT;
     }
-  // Ray was exactly on edge of box, check direction
+ 
 
   else 
     {
     if(tOriginToDivPlane > 0 && tOriginToDivPlane2 < 0)
      {
-     mustCheck = 1;
+     mustCheck = 1;  // The point is within right min and left max. both left and right subtrees must be checked
      }
 
     if ( tDivDirection < 0)
@@ -1237,7 +1236,7 @@ void vtkCellTreeLocator::Classify(const double origin[3],
       Far  = &this->Tree->Nodes.at(Parent->GetLeftChildIndex()+1);
       if(!(tOriginToDivPlane > 0 || tOriginToDivPlane < 0))
         {
-        mustCheck=1;
+        mustCheck=1;  // Ray was exactly on edge left max box.
         }
       rDist = (tDivDirection) ? 0 / tDivDirection : VTK_LARGE_FLOAT;
       }
@@ -1247,7 +1246,7 @@ void vtkCellTreeLocator::Classify(const double origin[3],
       Near = &this->Tree->Nodes.at(Parent->GetLeftChildIndex()+1);
       if(!(tOriginToDivPlane2 > 0 || tOriginToDivPlane2 < 0))
         {
-        mustCheck=1;
+        mustCheck=1; // Ray was exactly on edge right min box.
         }
       rDist = (tDivDirection) ? 0 / tDivDirection : VTK_LARGE_FLOAT;
       }

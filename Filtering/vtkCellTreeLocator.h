@@ -63,12 +63,13 @@ class VTK_FILTERING_EXPORT vtkCellTreeLocator : public vtkAbstractCellLocator
     void vtkCellTreeLocator::FreeSearchStructure(void);
     void vtkCellTreeLocator::GenerateRepresentation(int level, vtkPolyData *pd);
 protected:
-
-   
+  
     vtkCellTreeLocator();
     ~vtkCellTreeLocator();
 
-    void Build();
+    void BuildLocatorInternal();
+    void vtkCellTreeLocator::BuildLocatorIfNeeded();
+    void vtkCellTreeLocator::ForceBuildLocator();
     void Free();
 
     int MaxCellsPerLeaf;
