@@ -18,9 +18,12 @@
 
 vtkStandardNewMacro(vtkCellTreeLocator);
 
-const double EPSILON_= 1E-8;
-enum { POS_X, NEG_X, POS_Y, NEG_Y, POS_Z, NEG_Z };
-#define CELLTREE_MAX_DEPTH 32
+namespace
+{
+  const double EPSILON_= 1E-8;
+  enum { POS_X, NEG_X, POS_Y, NEG_Y, POS_Z, NEG_Z };
+  #define CELLTREE_MAX_DEPTH 32
+}
 
 // -------------------------------------------------------------------------
 // This class is the basic building block of the cell tree.  There is a node per dimension. i.e. There are 3 CellTreeNode
