@@ -30,7 +30,7 @@
 #include "vtkRegressionTestImage.h"
 #include "vtkDebugLeaks.h"
 
-int CellLocator2( int argc, char *argv[] )
+int CellLocator( int argc, char *argv[] )
 {
   // kuhnan's sample code used to test
   // vtkCellLocator::IntersectWithLine(...9 params...)
@@ -55,7 +55,7 @@ int CellLocator2( int argc, char *argv[] )
   // the cell locator
   vtkCellTreeLocator* locator = vtkCellTreeLocator::New();
   locator->SetDataSet(sphere2->GetOutput());
-  //locator->CacheCellBoundsOn();
+  locator->CacheCellBoundsOn();
   locator->AutomaticOn();
   locator->BuildLocator();
 

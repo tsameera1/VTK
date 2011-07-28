@@ -48,7 +48,7 @@ class VTK_FILTERING_EXPORT vtkCellTreeLocator : public vtkAbstractCellLocator
     class CellTreeNode;
 
     vtkTypeMacro(vtkCellTreeLocator,vtkAbstractCellLocator);
-    void PrintSelf(ostream& os, vtkIndent indent);
+    void vtkCellTreeLocator::PrintSelf(ostream& os, vtkIndent indent);
 
     // Description:
     // Constructor sets the maximum number of cells in a leaf to 8
@@ -102,7 +102,7 @@ class VTK_FILTERING_EXPORT vtkCellTreeLocator : public vtkAbstractCellLocator
         friend class PointTraversal;
         friend class CellTreeNode;
         friend class CellTreeBuilder;
-        //friend class vtkCellTreeLocator;
+        friend class vtkCellTreeLocator;
 
       public:
         float DataBBox[6]; // This store the bounding values of the dataset   
@@ -193,7 +193,7 @@ protected:
     friend class PointTraversal;
     friend class CellTreeNode;
     friend class CellTreeBuilder;
-    //friend class vtkCellTreeLocator;
+    friend class vtkCellTreeLocator;
 
 private:
   vtkCellTreeLocator(const vtkCellTreeLocator&);  // Not implemented.
