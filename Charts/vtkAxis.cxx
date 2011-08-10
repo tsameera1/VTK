@@ -70,6 +70,7 @@ vtkAxis::vtkAxis()
   this->Notation = 0; // Mixed - do the right thing...
   this->Behavior = 0;
   this->Pen = vtkPen::New();
+  this->TitleAppended = false;
 
   this->Pen->SetColor(0, 0, 0);
   this->Pen->SetWidth(1.0);
@@ -673,7 +674,7 @@ void vtkAxis::GenerateTickLabels(double min, double max)
 {
   // Now calculate the tick labels, and positions within the axis range
    
-    this->TickPositions->SetNumberOfTuples(0);
+  this->TickPositions->SetNumberOfTuples(0);
   this->TickLabels->SetNumberOfTuples(0);
 
   // We generate a logarithmic scale when logarithmic axis is activated and the
@@ -729,15 +730,15 @@ void vtkAxis::GenerateTickLabels(double min, double max)
     {
     // Now calculate the tick labels, and positions within the axis range
 
-    //*************************************************Tharindu*************
-        //This gets the tick interval and max, min of labeling from the Extended algorithm 
+    //This gets the tick interval and max, min of labeling from the Extended algorithm 
 
     double scaling = 0.0;
+    bool axisVertical = false;
 
-    if(this->Point1[0] == 0 && this->Point2[0] == 0)
+    if(this->Point1[0] == 0 && this->Point2[0] == 0) // When the axis is not initialized
       {
         scaling = 500 /
-                (this->Maximum - this->Minimum); /// THIS NEED TO BE FIXED. 500 is the length of the axis in pixels
+                (this->Maximum - this->Minimum); ///  500 is an intial guess for the length of the axis in pixels
 
       }
     else
@@ -747,6 +748,7 @@ void vtkAxis::GenerateTickLabels(double min, double max)
         {
         scaling = (this->Point2[1] - this->Point1[1]) /
                   (this->Maximum - this->Minimum);
+        axisVertical = true;
    
         }
       else
@@ -762,11 +764,12 @@ void vtkAxis::GenerateTickLabels(double min, double max)
     vtkAxisExtended* tickPositionExtended = vtkAxisExtended::New();
 
     // The following parameters are required for the legibility part in the optimization
-    tickPositionExtended->SetFontSize(fontSize);
-    tickPositionExtended->SetMinFontSize(minFontSize);
+  //  tickPositionExtended->SetFontSize(fontSize);
+    tickPositionExtended->SetDesiredFontSize(fontSize);
     tickPositionExtended->SetPrecision(this->Precision);
+    tickPositionExtended->SetIsAxisVertical(axisVertical);
 
-    double* values = tickPositionExtended->GenerateExtendedTickLabels(min, max, 4, scaling); // Value 4 is hard coded for the user desired tick spacing
+    vtkVector3d values = tickPositionExtended->GenerateExtendedTickLabels(min, max, 4, scaling); // Value 4 is hard coded for the user desired tick spacing
     min = values[0];
     max = values[1];
     this->TickInterval = values[2];
@@ -781,19 +784,15 @@ void vtkAxis::GenerateTickLabels(double min, double max)
       this->Maximum = max;
       }
     
-    if(tickPositionExtended->GetLabelLegibilityChanged()) // Change label text properties only if the Legibility method is executed
+
+    this->Notation = tickPositionExtended->GetLabelFormat();
+    this->LabelProperties->SetFontSize(tickPositionExtended->GetFontSize());
+    if(tickPositionExtended->GetOrientation() == 1)
       {
-        this->Notation = tickPositionExtended->GetLabelFormat();
-        int test = tickPositionExtended->GetFontSize();
-        this->LabelProperties->SetFontSize(tickPositionExtended->GetFontSize());
-        //if(tickPositionExtended->GetOrientation() == 1)
-        //  {
-        //  this->LabelProperties->SetOrientation(1.57);  // Set this to pi/2 to make the labels vertical
-        //  }
+      this->LabelProperties->SetOrientation(90);  // Set this to 90 to make the labels vertical
       }
+      
 
-
-    //***************************************Tharindu****************************
 
     double mult = max > min ? 1.0 : -1.0;
     double range = 0.0;
@@ -888,57 +887,108 @@ void vtkAxis::GenerateTickLabels()
 
 //-------------------------------------------------------------------
 // This methods generates tick labels for 8 different format notations
-//   1 - Decimal e.g. 5000
-//   2 - Factored Decimals e.g. 5 (thousands)
+//   1 - Scientific 5 * 10^6
+//   2 - Decimal e.g. 5000
 //   3 - K e.g. 5K
 //   4 - Factored K e.g. 5(K)
 //   5 - M e.g. 5M
 //   6 - Factored M e.g. 5(M)
-//   7 - Scientific 5 * 10^6
+//   7 - Factored Decimals e.g. 5 (thousands)
 //   8 - Factored Scientific 5 (10^6)
 
 void vtkAxis::GenerateLabelFormat(int notation, double n)
 {
   vtksys_ios::ostringstream ostr;
   ostr.imbue(vtkstd::locale::classic());
-      
-  ostr.precision(this->Precision);
-  ostr.setf(ios::fixed, ios::floatfield);
-  
+
         
   switch(notation)
   {
-    case 2:
+    case 1:
       ostr << n;
+      ostr.precision(this->Precision);
+      ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
       this->TickLabels->InsertNextValue(ostr.str());
       break;
-    case 7:
-      ostr << n/1000.0;
-      this->TickLabels->InsertNextValue(ostr.str());  // Three 0's get reduced
+    case 2:
+      ostr << n;
+      if((std::ceil(n)-std::floor(n)) != 0.0 )
+        {
+        ostr.precision(this->Precision);
+        }
+      this->TickLabels->InsertNextValue(ostr.str());
       break;
     case 3:
+      ostr.setf(ios::fixed, ios::floatfield);
       ostr << n/1000.0 << "K";
+      if((std::ceil(n/1000.0)-std::floor(n/1000.0)) != 0.0 )
+        {
+        ostr.precision(this->Precision);
+        }
       this->TickLabels->InsertNextValue(ostr.str()); // minus three zeros + K
       break;
     case 4:
+      ostr.setf(ios::fixed, ios::floatfield);
       ostr << n/1000.0 ;
+      if((std::ceil(n/1000.0)-std::floor(n/1000.0)) != 0.0 )
+        {
+        ostr.precision(this->Precision);
+        }
+      if(!TitleAppended)
+        {
+        this->Title.append(" (K)");
+        TitleAppended = true;
+        }
       this->TickLabels->InsertNextValue(ostr.str());// minus three zeros
       break;
     case 5:
+      ostr.setf(ios::fixed, ios::floatfield);
       ostr << n/1000000.0 << "M";
+      if((std::ceil(n/1000000.0)-std::floor(n/1000000.0)) != 0.0 )
+        {
+        ostr.precision(this->Precision);
+        }
       this->TickLabels->InsertNextValue(ostr.str()); // minus six zeros 
       break;
     case 6:
+      ostr.precision(this->Precision);
+      ostr.setf(ios::fixed, ios::floatfield);
       ostr << n/1000000.0;
+      if((std::ceil(n/1000000.0)-std::floor(n/1000000.0)) != 0.0 )
+        {
+        ostr.precision(this->Precision);
+        }
+      if(!TitleAppended)
+        {
+        this->Title.append(" (M)");
+        TitleAppended = true;
+        }
       this->TickLabels->InsertNextValue(ostr.str()); // minus six zeros + M
       break;
-    case 1:
-      ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
-      this->TickLabels->InsertNextValue(ostr.str());
+    case 7:       
+      ostr.precision(this->Precision);
+      ostr.setf(ios::fixed, ios::floatfield);
+      ostr << n/1000.0;
+      if((std::ceil(n/1000.0)-std::floor(n/1000.0)) != 0.0 )
+        {
+        ostr.precision(this->Precision);
+        }
+      if(!TitleAppended)
+        {
+        this->Title.append(" ('000)");
+        TitleAppended = true;
+        }
+      this->TickLabels->InsertNextValue(ostr.str());  // Three 0's get reduced
       break;
     case 8:
+      ostr.precision(this->Precision);
       ostr.setf(vtksys_ios::ios::scientific, vtksys_ios::ios::floatfield);
       ostr << n/1000.0 ;
+      if(!TitleAppended)
+        {
+        this->Title.append(" ('000)");
+        TitleAppended = true;
+        }
       this->TickLabels->InsertNextValue(ostr.str());
       break;
   }      
